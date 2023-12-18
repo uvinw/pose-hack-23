@@ -3,6 +3,22 @@
 
     import { onMount } from 'svelte'
 
+    let globalLocalized = null;
+    let globalWorld = null;
+
+    let dosomething = () => {
+        // console.log(globalResult)
+        let leftShoulderX = globalLocalized["12"]["x"]
+        let leftElbowX = globalLocalized["14"]["x"]
+        console.log("localized", leftShoulderX)
+        console.log("word", globalWorld["12"]["x"])
+
+        if (leftShoulderX < 0) console.log("outside view"); else console.log("inside view");
+        // console.log("word", results["poseWorldLandmarks"]["12"])
+
+
+    }
+
     onMount(async () => {
 
 
@@ -27,10 +43,10 @@
         // call tick() each time the graph runs.
         const fpsControl = new controls.FPS();
         // Optimization: Turn off animated spinner after its hiding animation is done.
-        const spinner = document.querySelector('.loading');
-        spinner.ontransitionend = () => {
-            spinner.style.display = 'none';
-        };
+        // const spinner = document.querySelector('.loading');
+        // spinner.ontransitionend = () => {
+        //     spinner.style.display = 'none';
+        // };
         const landmarkContainer = document.getElementsByClassName('landmark-grid-container')[0];
         const grid = new LandmarkGrid(landmarkContainer, {
             connectionColor: 0xCCCCCC,
@@ -46,7 +62,14 @@
         let activeEffect = 'mask';
 
         function onResults(results) {
+
+            globalLocalized = results["poseLandmarks"];
+            globalWorld = results["poseWorldLandmarks"];
+
             // Hide the spinner.
+            // console.log("localized", results)
+            // console.log("localized", results["poseLandmarks"]["12"])
+            // console.log("word", results["poseWorldLandmarks"]["12"])
             document.body.classList.add('loaded');
             // Update the frame rate.
             fpsControl.tick();
@@ -106,8 +129,8 @@
 
         const pose = new mpPose.Pose(options);
         pose.onResults(onResults);
-        // Present a control panel through which the user can manipulate the solution
-        // options.
+
+    //todo controls here
         new controls
             .ControlPanel(controlsElement, {
                 selfieMode: true,
@@ -120,7 +143,7 @@
                 effect: 'background',
             })
             .add([
-                new controls.StaticText({title: 'MediaPipe Pose'}),
+                new controls.StaticText({title: 'Poserr for Vivira'}),
                 fpsControl,
                 new controls.Toggle({title: 'Selfie Mode', field: 'selfieMode'}),
                 new controls.SourcePicker({
@@ -176,6 +199,7 @@
                 activeEffect = x['effect'];
                 pose.setOptions(options);
             });
+
     })
 
 
@@ -220,9 +244,7 @@
 
 
 <svelte:head>
-    <script src="https://cdn.skypack.dev/device-detector-js@2.2.10"></script>;
-
-
+    <script src="https://cdn.skypack.dev/device-detector-js@2.2.10"></script>
     <link rel="stylesheet" type="text/css"
           href="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils_3d@0.2/landmark_grid.css" crossorigin="anonymous">
     <link rel="stylesheet" type="text/css"
@@ -239,22 +261,26 @@
 </svelte:head>
 
 
-<div class="container">
-    <video class="input_video"></video>
-    <canvas class="output_canvas" width="1280px" height="720px"></canvas>
-    <div class="loading">
-        <div class="spinner"></div>
-        <div class="message">
-            Loading
-        </div>
-    </div>
+<div class="container h-screen w-full">
+    <video class="input_video hidden"></video>
+    <canvas class="output_canvas"></canvas>
+<!--    <div class="loading">-->
+<!--        <div class="spinner"></div>-->
+<!--        <div class="message">-->
+<!--            Loading-->
+<!--        </div>-->
+<!--    </div>-->
 </div>
-<div class="control-panel">
+<div class="fixed top-0 left-0 m-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" on:click|preventDefault={dosomething}>
+    <a href="/">Snapshot</a>
 </div>
-<div class='square-box'>
+<div class="control-panel fixed left-0 top-0 h-screen w-1/6 bg-white hidden">
+</div>
+<div class="square-box fixed right-0 top-0 h-screen w-1/6 bg-white">
     <div class="landmark-grid-container">
     </div>
 </div>
+
 
 <style>
     .square-box {
