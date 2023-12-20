@@ -1,26 +1,40 @@
 <script>
     // import './test.css';
 
-    import { onMount } from 'svelte'
-
+    import {onMount} from 'svelte'
+    import isHeadBent  from "$lib/bend-head";
     let globalLocalized = null;
     let globalWorld = null;
 
-    let dosomething = () => {
+    let takeSnapshot = () => {
         // console.log(globalResult)
-        let leftShoulderX = globalLocalized["12"]["x"]
-        let leftElbowX = globalLocalized["14"]["x"]
-        console.log("localized", leftShoulderX)
-        console.log("word", globalWorld["12"]["x"])
+        let leftShoulder = globalLocalized["12"]
+        let leftElbow = globalLocalized["14"]
+        // console.log("localized", leftShoulder)
+        // console.log("word", globalWorld["12"]["x"])
 
-        if (leftShoulderX < 0) console.log("outside view"); else console.log("inside view");
-        // console.log("word", results["poseWorldLandmarks"]["12"])
+        isHeadBent(globalLocalized)
+
+        if (leftShoulder["x"] < 0) {
+            console.log("shoulder outside view");
+            return;
+        }
+        if (leftElbow["x"] < 0) {
+            console.log("elbow outside view");
+            return;
+        }
+
+        // console.log(leftShoulder["y"])
+        // console.log(leftElbow["y"])
+        if (leftElbow["y"] < leftShoulder["y"]) {
+            console.log("elbow below shoulder");
+            return;
+        }
 
 
     }
 
     onMount(async () => {
-
 
 
         const controls = window;
@@ -97,6 +111,9 @@
                 canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
             }
             if (results.poseLandmarks) {
+                console.log()
+                console.log(results.poseLandmarks[mpPose['POSE_LANDMARKS_LEFT']['LEFT_SHOULDER']]['y'])
+
                 drawingUtils.drawConnectors(canvasCtx, results.poseLandmarks, mpPose.POSE_CONNECTIONS, {
                     visibilityMin: 0.65,
                     color: 'white'
@@ -114,7 +131,11 @@
                     fillColor: 'rgb(0,217,231)'
                 });
                 drawingUtils.drawLandmarks(canvasCtx, Object.values(mpPose.POSE_LANDMARKS_NEUTRAL)
-                    .map(index => results.poseLandmarks[index]), {visibilityMin: 0.65, color: 'white', fillColor: 'white'});
+                    .map(index => results.poseLandmarks[index]), {
+                    visibilityMin: 0.65,
+                    color: 'white',
+                    fillColor: 'white'
+                });
             }
             canvasCtx.restore();
             if (results.poseWorldLandmarks) {
@@ -130,7 +151,7 @@
         const pose = new mpPose.Pose(options);
         pose.onResults(onResults);
 
-    //todo controls here
+        //todo controls here
         new controls
             .ControlPanel(controlsElement, {
                 selfieMode: true,
@@ -264,16 +285,19 @@
 <div class="container h-screen w-full">
     <video class="input_video hidden"></video>
     <canvas class="output_canvas"></canvas>
-<!--    <div class="loading">-->
-<!--        <div class="spinner"></div>-->
-<!--        <div class="message">-->
-<!--            Loading-->
-<!--        </div>-->
-<!--    </div>-->
+    <!--    <div class="loading">-->
+    <!--        <div class="spinner"></div>-->
+    <!--        <div class="message">-->
+    <!--            Loading-->
+    <!--        </div>-->
+    <!--    </div>-->
 </div>
-<div class="fixed top-0 left-0 m-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" on:click|preventDefault={dosomething}>
-    <a href="/">Snapshot</a>
-</div>
+<a href="/" on:click|preventDefault={takeSnapshot}>
+    <div class="fixed top-0 left-0 m-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+        Snapshot
+    </div>
+</a>
+
 <div class="control-panel fixed left-0 top-0 h-screen w-1/6 bg-white hidden">
 </div>
 <div class="square-box fixed right-0 top-0 h-screen w-1/6 bg-white">
