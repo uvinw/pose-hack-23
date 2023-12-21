@@ -5,6 +5,7 @@
     import isHeadBent from "$lib/bend-head";
     import calculateAngle from "$lib/calculate-angle";
     import getSample from "$lib/sample-array-angle";
+    import DynamicTimeWarping from "$lib/dtw.js";
 
     let globalMpPose = null;
     let globalFrame = null;
@@ -14,7 +15,7 @@
 
     // -- angle related
     const frameRate = 30; // Example frame rate
-    const duration = 5; // Duration in seconds
+    const duration = 2; // Duration in seconds
     const maxFrames = frameRate * duration;
     let angles = [];
 
@@ -25,14 +26,30 @@
         let elbowAngle = calculateAngle(canvasContext, leftShoulder, leftElbow, leftWrist)
 
         angles.push({ angle: elbowAngle, timestamp: Date.now() });
-        // Remove the oldest angles if the array exceeds the 5-second window
+        // Remove the oldest angles if the array exceeds the time window
         while (angles.length > 0 && angles[0].timestamp < Date.now() - duration * 1000) {
             angles.shift();
         }
+        calculateDTWDistance();
     }
 
-    let triggerSnapshotAnalysis = () => {
-        console.log(getSample()   )
+    let calculateDTWDistance = async () => {
+        const distFunc = (a, b) => Math.abs(a - b);
+        let convertedAngles = await Promise.all(angles.map(function (item) {
+            return item.angle;
+        }));
+        let sample = getSample();
+        let referenceAngles = await Promise.all(sample.map(function (item) {
+            return item.value;
+        }));
+        const dtw = new DynamicTimeWarping(referenceAngles, convertedAngles, distFunc);
+        const dist = dtw.getDistance();
+        if (dist<1000) {
+            console.log(dist)
+        }
+        return dist;
+    }
+    let triggerSnapshotAnalysis = async () => {
         // analyzeFrame(globalMpPose, globalFrame, globalCanvasContext);
         angles.forEach((angle) => {
             // console.log(angle.angle)

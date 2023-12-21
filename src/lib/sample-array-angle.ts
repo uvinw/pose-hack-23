@@ -1,4 +1,4 @@
-let getSample = async () => {
+let getSample = () => {
 
     let sample = [
         {value: 0.0}, {value: 0.6}, {value: 1.21}, {value: 1.81}, {value: 2.42}, {value: 3.02}, {value: 3.62},
