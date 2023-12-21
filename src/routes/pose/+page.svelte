@@ -5,6 +5,7 @@
     import isHeadBent from "$lib/bend-head";
     import calculateAngle from "$lib/calculate-angle";
     import getSample from "$lib/sample-array-angle";
+    import inverseNormalize from "$lib/inverse-normalize";
     import DynamicTimeWarping from "$lib/dtw.js";
 
     let globalMpPose = null;
@@ -19,18 +20,23 @@
     const maxFrames = frameRate * duration;
     let angles = [];
 
-    let analyzeFrame = (mpPose, frame, canvasContext) => {
+    let analyzeFrame = async (mpPose, frame, canvasContext) => {
         let leftShoulder = frame[mpPose['POSE_LANDMARKS']['RIGHT_SHOULDER']]
         let leftElbow = frame[mpPose['POSE_LANDMARKS']['RIGHT_ELBOW']]
         let leftWrist = frame[mpPose['POSE_LANDMARKS']['RIGHT_WRIST']]
         let elbowAngle = calculateAngle(canvasContext, leftShoulder, leftElbow, leftWrist)
 
-        angles.push({ angle: elbowAngle, timestamp: Date.now() });
+        angles.push({angle: elbowAngle, timestamp: Date.now()});
         // Remove the oldest angles if the array exceeds the time window
         while (angles.length > 0 && angles[0].timestamp < Date.now() - duration * 1000) {
             angles.shift();
         }
-        calculateDTWDistance();
+        let dwtDistance = await calculateDTWDistance();
+        // convert dwtdistance to number
+        if (parseFloat(dwtDistance) < 1500) {
+            let normalizedDwt = inverseNormalize(dwtDistance, 200, 1500)
+            console.log(normalizedDwt)
+        }
     }
 
     let calculateDTWDistance = async () => {
@@ -45,7 +51,7 @@
         const dtw = new DynamicTimeWarping(referenceAngles, convertedAngles, distFunc);
         const dist = dtw.getDistance();
         if (dist<1000) {
-            console.log(dist)
+            // console.log(dist)
         }
         return dist;
     }
@@ -86,6 +92,7 @@
     let globalCanvasContext = null;
     onMount(async () => {
 
+        updateProgressBar(0)
 
         const controls = window;
         const LandmarkGrid = window.LandmarkGrid;
@@ -320,6 +327,16 @@
     //     }
     // }
 
+    // function updateProgressBar(progress) {
+    //     const progressBar = document.getElementById('progressBar');
+    //     progressBar.innerHTML = `
+    //     <svg width="30%" height="30%" viewBox="0 0 42 42" class="donut">
+    //         <circle class="donut-hole" cx="21" cy="21" r="15.91549430918954" fill="none"></circle>
+    //         <circle class="donut-ring" cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#d2d3d4" stroke-width="3"></circle>
+    //         <circle class="donut-segment" cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#00a3e0" stroke-width="3" stroke-dasharray="${progress} ${100 - progress}" stroke-dashoffset="25"></circle>
+    //     </svg>
+    // `;
+    // }
 
 </script>
 
@@ -357,6 +374,9 @@
         Snapshot
     </div>
 </a>
+<!--<div id="progressBar" class="absolute top-0 left-0 w-full h-full flex items-center justify-center">-->
+<!--    &lt;!&ndash; Progress bar content goes here &ndash;&gt;-->
+<!--</div>-->
 
 <div class="control-panel fixed left-0 top-0 h-screen w-1/6 bg-white hidden">
 </div>
