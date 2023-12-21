@@ -2,24 +2,41 @@
     // import './test.css';
 
     import {onMount} from 'svelte'
-    import isHeadBent  from "$lib/bend-head";
+    import isHeadBent from "$lib/bend-head";
     import calculateAngle from "$lib/calculate-angle";
+    import getSample from "$lib/sample-array-angle";
+
     let globalMpPose = null;
     let globalFrame = null;
     let globalResult = null;
+    let globalPreviousTimestamp = 0;
+    let globalFrameRate = 0;
+
+    // -- angle related
+    const frameRate = 30; // Example frame rate
+    const duration = 5; // Duration in seconds
+    const maxFrames = frameRate * duration;
+    let angles = [];
 
     let analyzeFrame = (mpPose, frame, canvasContext) => {
-
         let leftShoulder = frame[mpPose['POSE_LANDMARKS']['RIGHT_SHOULDER']]
         let leftElbow = frame[mpPose['POSE_LANDMARKS']['RIGHT_ELBOW']]
         let leftWrist = frame[mpPose['POSE_LANDMARKS']['RIGHT_WRIST']]
+        let elbowAngle = calculateAngle(canvasContext, leftShoulder, leftElbow, leftWrist)
 
-        calculateAngle(canvasContext, leftShoulder, leftElbow, leftWrist)
+        angles.push({ angle: elbowAngle, timestamp: Date.now() });
+        // Remove the oldest angles if the array exceeds the 5-second window
+        while (angles.length > 0 && angles[0].timestamp < Date.now() - duration * 1000) {
+            angles.shift();
+        }
     }
 
     let triggerSnapshotAnalysis = () => {
-        console.log("triggered")
-        analyzeFrame(globalMpPose, globalFrame, globalCanvasContext);
+        console.log(getSample()   )
+        // analyzeFrame(globalMpPose, globalFrame, globalCanvasContext);
+        angles.forEach((angle) => {
+            // console.log(angle.angle)
+        })
     }
     let takeSnapshot = () => {
         // console.log(globalResult)
@@ -96,6 +113,15 @@
 
             globalMpPose = mpPose;
             globalFrame = results["poseLandmarks"];
+            const currentTimestamp = performance.now();
+            if (globalPreviousTimestamp !== 0) {
+                const timeDifference = currentTimestamp - globalPreviousTimestamp; // Time difference in milliseconds
+                 // Calculating frames per second
+                globalFrameRate = 1000 / timeDifference;
+            }
+            globalPreviousTimestamp = currentTimestamp;
+
+
             // globalWorld = results["poseWorldLandmarks"];
 
             // Hide the spinner.

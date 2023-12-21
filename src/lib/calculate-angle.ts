@@ -15,16 +15,16 @@ let calculateAngle = async (canvasContext, firstPoint, secondPoint, thirdPoint) 
     const angle = Math.acos(dotProduct / (magnitudeAB * magnitudeBC));
     // Convert radians to degrees
     let degreeAngle = angle * (180 / Math.PI)
-    degreeAngle = Number(degreeAngle.toFixed(0));
+    degreeAngle = Number(degreeAngle.toFixed(2));
 
     // Print the angle on the canvas
     canvasContext.font = "20px Arial";
-    canvasContext.fillStyle = "white"; // Use a color that stands out
+    canvasContext.fillStyle = "white";
     canvasContext.strokeStyle = "white";
     canvasContext.lineWidth = 3;
     const elbowCanvasX = secondPoint.x * canvasContext.canvas.width + 20;
     const elbowCanvasY = secondPoint.y * canvasContext.canvas.height - 20;
-    canvasContext.fillText(degreeAngle + "°", elbowCanvasX, elbowCanvasY);
+    canvasContext.fillText(Number(degreeAngle.toFixed(0)) + "°", elbowCanvasX, elbowCanvasY);
 
     return degreeAngle
 }
