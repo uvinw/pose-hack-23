@@ -3,10 +3,9 @@
 
     import {onMount} from 'svelte'
     import isHeadBent  from "$lib/bend-head";
+    import calculateAngle from "$lib/calculate-angle";
     let globalMpPose = null;
     let globalFrame = null;
-
-
     let globalResult = null;
 
     let analyzeFrame = (mpPose, frame, canvasContext) => {
@@ -15,33 +14,7 @@
         let leftElbow = frame[mpPose['POSE_LANDMARKS']['RIGHT_ELBOW']]
         let leftWrist = frame[mpPose['POSE_LANDMARKS']['RIGHT_WRIST']]
 
-        const vectorAB = { x: leftElbow.x - leftShoulder.x, y: leftElbow.y - leftShoulder.y };
-        const vectorBC = { x: leftWrist.x - leftElbow.x, y: leftWrist.y - leftElbow.y };
-        // Calculate the dot product of AB & BC
-        const dotProduct = vectorAB.x * vectorBC.x + vectorAB.y * vectorBC.y;
-        // Calculate the magnitude of AB & BC
-        const magnitudeAB = Math.sqrt(vectorAB.x * vectorAB.x + vectorAB.y * vectorAB.y);
-        const magnitudeBC = Math.sqrt(vectorBC.x * vectorBC.x + vectorBC.y * vectorBC.y);
-        // Calculate the angle in radians
-        const angle = Math.acos(dotProduct / (magnitudeAB * magnitudeBC));
-
-        // Convert radians to degrees
-        let degreeAngle = angle * (180 / Math.PI)
-        degreeAngle = degreeAngle.toFixed(0);
-        // console.log(degreeAngle);
-
-        // canvasContext.clearRect(0, 0, canvasContext.canvas.width, canvasContext.canvas.height);
-        canvasContext.font = "20px Arial";
-        canvasContext.fillStyle = "white"; // Use a color that stands out
-        canvasContext.strokeStyle = "white";
-        canvasContext.lineWidth = 3;
-
-
-        const elbowCanvasX = leftElbow.x * canvasContext.canvas.width + 20;
-        const elbowCanvasY = leftElbow.y * canvasContext.canvas.height - 20;
-
-        canvasContext.fillText( degreeAngle + "°", elbowCanvasX, elbowCanvasY);
-
+        calculateAngle(canvasContext, leftShoulder, leftElbow, leftWrist)
     }
 
     let triggerSnapshotAnalysis = () => {
