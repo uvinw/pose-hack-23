@@ -92,8 +92,6 @@
     let globalCanvasContext = null;
     onMount(async () => {
 
-        updateProgressBar(0)
-
         const controls = window;
         const LandmarkGrid = window.LandmarkGrid;
         const drawingUtils = window;
