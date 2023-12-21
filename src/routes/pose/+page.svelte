@@ -3,17 +3,59 @@
 
     import {onMount} from 'svelte'
     import isHeadBent  from "$lib/bend-head";
-    let globalLocalized = null;
-    let globalWorld = null;
+    let globalMpPose = null;
+    let globalFrame = null;
 
+
+    let globalResult = null;
+
+    let analyzeFrame = (mpPose, frame, canvasContext) => {
+
+        let leftShoulder = frame[mpPose['POSE_LANDMARKS']['RIGHT_SHOULDER']]
+        let leftElbow = frame[mpPose['POSE_LANDMARKS']['RIGHT_ELBOW']]
+        let leftWrist = frame[mpPose['POSE_LANDMARKS']['RIGHT_WRIST']]
+
+        const vectorAB = { x: leftElbow.x - leftShoulder.x, y: leftElbow.y - leftShoulder.y };
+        const vectorBC = { x: leftWrist.x - leftElbow.x, y: leftWrist.y - leftElbow.y };
+        // Calculate the dot product of AB & BC
+        const dotProduct = vectorAB.x * vectorBC.x + vectorAB.y * vectorBC.y;
+        // Calculate the magnitude of AB & BC
+        const magnitudeAB = Math.sqrt(vectorAB.x * vectorAB.x + vectorAB.y * vectorAB.y);
+        const magnitudeBC = Math.sqrt(vectorBC.x * vectorBC.x + vectorBC.y * vectorBC.y);
+        // Calculate the angle in radians
+        const angle = Math.acos(dotProduct / (magnitudeAB * magnitudeBC));
+
+        // Convert radians to degrees
+        let degreeAngle = angle * (180 / Math.PI)
+        degreeAngle = degreeAngle.toFixed(0);
+        // console.log(degreeAngle);
+
+        // canvasContext.clearRect(0, 0, canvasContext.canvas.width, canvasContext.canvas.height);
+        canvasContext.font = "20px Arial";
+        canvasContext.fillStyle = "white"; // Use a color that stands out
+        canvasContext.strokeStyle = "white";
+        canvasContext.lineWidth = 3;
+
+
+        const elbowCanvasX = leftElbow.x * canvasContext.canvas.width + 20;
+        const elbowCanvasY = leftElbow.y * canvasContext.canvas.height - 20;
+
+        canvasContext.fillText( degreeAngle + "°", elbowCanvasX, elbowCanvasY);
+
+    }
+
+    let triggerSnapshotAnalysis = () => {
+        console.log("triggered")
+        analyzeFrame(globalMpPose, globalFrame, globalCanvasContext);
+    }
     let takeSnapshot = () => {
         // console.log(globalResult)
-        let leftShoulder = globalLocalized["12"]
-        let leftElbow = globalLocalized["14"]
+        let leftShoulder = globalFrame["12"]
+        let leftElbow = globalFrame["14"]
         // console.log("localized", leftShoulder)
         // console.log("word", globalWorld["12"]["x"])
 
-        isHeadBent(globalLocalized)
+        isHeadBent(globalFrame)
 
         if (leftShoulder["x"] < 0) {
             console.log("shoulder outside view");
@@ -34,6 +76,7 @@
 
     }
 
+    let globalCanvasContext = null;
     onMount(async () => {
 
 
@@ -53,6 +96,7 @@
         const canvasElement = document.getElementsByClassName('output_canvas')[0];
         const controlsElement = document.getElementsByClassName('control-panel')[0];
         const canvasCtx = canvasElement.getContext('2d');
+        globalCanvasContext = canvasCtx;
         // We'll add this to our control panel later, but we'll save it here so we can
         // call tick() each time the graph runs.
         const fpsControl = new controls.FPS();
@@ -77,8 +121,9 @@
 
         function onResults(results) {
 
-            globalLocalized = results["poseLandmarks"];
-            globalWorld = results["poseWorldLandmarks"];
+            globalMpPose = mpPose;
+            globalFrame = results["poseLandmarks"];
+            // globalWorld = results["poseWorldLandmarks"];
 
             // Hide the spinner.
             // console.log("localized", results)
@@ -111,8 +156,7 @@
                 canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
             }
             if (results.poseLandmarks) {
-                console.log()
-                console.log(results.poseLandmarks[mpPose['POSE_LANDMARKS_LEFT']['LEFT_SHOULDER']]['y'])
+                analyzeFrame(mpPose, results["poseLandmarks"], canvasCtx)
 
                 drawingUtils.drawConnectors(canvasCtx, results.poseLandmarks, mpPose.POSE_CONNECTIONS, {
                     visibilityMin: 0.65,
@@ -284,7 +328,7 @@
 
 <div class="container h-screen w-full">
     <video class="input_video hidden"></video>
-    <canvas class="output_canvas"></canvas>
+    <canvas class="output_canvas" width="1280px" height="720px"></canvas>
     <!--    <div class="loading">-->
     <!--        <div class="spinner"></div>-->
     <!--        <div class="message">-->
@@ -292,7 +336,7 @@
     <!--        </div>-->
     <!--    </div>-->
 </div>
-<a href="/" on:click|preventDefault={takeSnapshot}>
+<a href="/" on:click|preventDefault={triggerSnapshotAnalysis}>
     <div class="fixed top-0 left-0 m-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
         Snapshot
     </div>
