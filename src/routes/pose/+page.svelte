@@ -3,7 +3,7 @@
 
     import {onMount} from 'svelte'
     import isHeadBent from "$lib/bend-head";
-    import calculateAngle from "$lib/calculate-angle";
+    import {calculateAngle, calculateNeckAngle, midPointCalculator, normalizeForCanvas} from "$lib/calculate-angle";
     import getSample from "$lib/sample-array-angle";
     import inverseNormalize from "$lib/inverse-normalize";
     import DynamicTimeWarping from "$lib/dtw.js";
@@ -22,22 +22,31 @@
     let recordedAngles = [];
 
     let analyzeFrame = async (mpPose, frame, canvasContext) => {
-        let leftShoulder = frame[mpPose['POSE_LANDMARKS']['RIGHT_SHOULDER']]
-        let leftElbow = frame[mpPose['POSE_LANDMARKS']['RIGHT_ELBOW']]
-        let leftWrist = frame[mpPose['POSE_LANDMARKS']['RIGHT_WRIST']]
-        let elbowAngle = calculateAngle(canvasContext, leftShoulder, leftElbow, leftWrist)
+        let rightShoulder = frame[mpPose['POSE_LANDMARKS']['RIGHT_SHOULDER']]
+        let rightElbow = frame[mpPose['POSE_LANDMARKS']['RIGHT_ELBOW']]
+        let rightWrist = frame[mpPose['POSE_LANDMARKS']['RIGHT_WRIST']]
+        let leftShoulder = frame[mpPose['POSE_LANDMARKS']['LEFT_SHOULDER']]
+        let leftElbow = frame[mpPose['POSE_LANDMARKS']['LEFT_ELBOW']]
+        let leftWrist = frame[mpPose['POSE_LANDMARKS']['LEFT_WRIST']]
+        let nose = frame[mpPose['POSE_LANDMARKS']['NOSE']]
 
-        // angle calculation =======================================
-        angles.push({angle: elbowAngle, timestamp: Date.now()});
+        let leftElbowAngle = calculateAngle(canvasContext, leftShoulder, leftElbow, leftWrist, false)
+        let rightElbowAngle = calculateAngle(canvasContext, rightShoulder, rightElbow, rightWrist, true)
+        let neckAngle = calculateNeckAngle(canvasContext, nose, leftShoulder, rightShoulder);
+        let leftShoulderAngle = calculateAngle(canvasContext, { x: leftShoulder.x, y: leftShoulder.y - 1 }, leftShoulder, leftWrist, false)
+        let rightShoulderAngle = calculateAngle(canvasContext, { x: rightShoulder.x, y: rightShoulder.y - 1 }, rightShoulder, rightWrist, true)
+
+        //todo nose.z
+
+        // angle saving to memory =======================================
+        angles.push({rightElbow: rightElbowAngle, leftElbow: leftElbowAngle, timestamp: Date.now()});
         // Remove the oldest angles if the array exceeds the time window
         while (angles.length > 0 && angles[0].timestamp < Date.now() - duration * 1000) {
             angles.shift();
         }
-
         if (recordedAngles.length === 0) { // return a high DWT distance if no recorded angles
             return;
         }
-
         // DWT distance =======================================
         let dwtDistance = await calculateDTWDistance();
         // convert dwt distance to %
@@ -50,10 +59,10 @@
     let calculateDTWDistance = async () => {
         const distFunc = (a, b) => Math.abs(a - b);
         let convertedAngles = await Promise.all(angles.map(function (item) {
-            return item.angle;
+            return item.rightElbow;
         }));
         let convertedRecordedAngles = await Promise.all(recordedAngles.map(function (item) {
-            return item.angle;
+            return item.rightElbow;
         }));
         const dtw = new DynamicTimeWarping(convertedRecordedAngles, convertedAngles, distFunc);
         const dist = dtw.getDistance();
