@@ -66,14 +66,20 @@
         }));
         const dtw = new DynamicTimeWarping(convertedRecordedAngles, convertedAngles, distFunc);
         const dist = dtw.getDistance();
+
+        const elbowBlinker = document.getElementById('elbowBlinker');
+
         if (dist<1000) {
             // console.log(dist)
+            elbowBlinker.classList.add('bg-green-500');
+        } else{
+            elbowBlinker.classList.remove('bg-green-500');
         }
         return dist;
     }
 
     let isRecording = false;
-    let triggerRecord = async () => {
+    let triggerRecord = () => {
         if (!isRecording) {
             isRecording = true;
             showRecordingIndicator(true)
@@ -81,11 +87,11 @@
                 console.log('5 seconds have passed!');
                 showRecordingIndicator(false)
                 recordedAngles = [...angles];
+                isRecording = false;
             }, 5000);
 
         } else {
-            isRecording = false;
-            showRecordingIndicator(false)
+            // do nothing
         }
 
     }
@@ -370,17 +376,19 @@
     // `;
     // }
 
-    function showRecordingIndicator(show) {
+    function showRecordingIndicator(isRecording) {
         const recordingIndicator = document.getElementById('recordingIndicator');
         const recordButton = document.getElementById('recordButton');
-        if (show) {
+        if (isRecording) {
             recordingIndicator.classList.remove('hidden');
             recordButton.classList.add('bg-red-700');
             recordButton.classList.remove('bg-red-500');
+            recordButton.classList.add('cursor-not-allowed');
         } else {
             recordingIndicator.classList.add('hidden');
             recordButton.classList.add('bg-red-500');
             recordButton.classList.remove('bg-red-700');
+            recordButton.classList.remove('cursor-not-allowed');
         }
     }
 </script>
@@ -408,6 +416,8 @@
     <video class="input_video hidden"></video>
     <div class="relative w-[1280px] h-[720px]">
         <canvas class="output_canvas" width="1280px" height="720px"></canvas>
+
+        <!-- Recording indicator -->
         <div id="recordingIndicator" class="absolute top-10 left-0 w-full flex justify-center">
             <div class="blink animate-pulse">
                 <svg width="300" height="50" viewBox="0 0 200 50" xmlns="http://www.w3.org/2000/svg" class="mt-2">
@@ -417,25 +427,38 @@
             </div>
         </div>
 
-    </div>
+        <!-- Floating Side Panel -->
+        <div class="absolute top-0 left-0 h-full bg-transparent flex flex-col p-4 space-y-4">
+            <!-- Contents of the panel -->
+            <div>
+                <a href="/" on:click|preventDefault={triggerRecord}>
+                    <div id="recordButton" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 flex items-center justify-center rounded">                        Record
+                    </div>
+                </a>
+            </div>
+            <div>
+                <a href="/" on:click|preventDefault={triggerSnapshotAnalysis}>
+                    <div class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                        Snapshot
+                    </div>
+                </a>
+            </div>
+            <div class="flex-grow flex flex-col justify-center items-center">
+                <div>Centered Content 1</div>
+                <div>Centered Content 2</div>
+                <div id="elbowBlinker" class="flex items-center justify-center w-40 h-40 rounded-full">
+                    <img src="images/elbow.png" alt="Icon" class="w-20 h-20" />
+                </div>
 
-    <!--    <div class="loading">-->
-    <!--        <div class="spinner"></div>-->
-    <!--        <div class="message">-->
-    <!--            Loading-->
-    <!--        </div>-->
-    <!--    </div>-->
+            </div>
+            <div>Content 3</div>
+            <!-- Add more content as needed -->
+        </div>
+
+    </div>
 </div>
-<a href="/" on:click|preventDefault={triggerSnapshotAnalysis}>
-    <div class="fixed top-0 left-0 m-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-        Snapshot
-    </div>
-</a>
-<a href="/" on:click|preventDefault={triggerRecord}>
-    <div id="recordButton" class="fixed top-0 left-40 m-4 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
-        Record
-    </div>
-</a>
+
+
 <!--<div id="progressBar" class="absolute top-0 left-0 w-full h-full flex items-center justify-center">-->
 <!--    &lt;!&ndash; Progress bar content goes here &ndash;&gt;-->
 <!--</div>-->

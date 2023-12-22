@@ -26,7 +26,6 @@ export let calculateAngle = async (canvasContext, firstPoint, secondPoint, third
         }
     }
 
-
     // Convert radians to degrees
     let degreeAngle = angle * (180 / Math.PI)
     degreeAngle = Number(degreeAngle.toFixed(2));
@@ -58,7 +57,6 @@ export let calculateNeckAngle = async (canvasContext, nose, leftShoulder, rightS
 
     let normalizedMidShoulder = normalizeForCanvas(canvasContext, midShoulder)
 
-    console.log(midShoulder)
     canvasContext.fillStyle = "white";
     canvasContext.strokeStyle = "white";
     canvasContext.lineWidth = 3;
@@ -67,7 +65,7 @@ export let calculateNeckAngle = async (canvasContext, nose, leftShoulder, rightS
     canvasContext.lineTo(normalizedMidShoulder.x, normalizedMidShoulder.y);
     canvasContext.stroke();
 
-    return calculateAngle(canvasContext, rightShoulder, midShoulder, nose)
+    return calculateAngle(canvasContext, rightShoulder, midShoulder, nose, false)
 }
 
 export let normalizeForCanvas = (canvasContext, point) => {
