@@ -3,8 +3,7 @@
 
     import {onMount} from 'svelte'
     import isHeadBent from "$lib/bend-head";
-    import {calculateAngle, calculateNeckAngle, midPointCalculator, normalizeForCanvas} from "$lib/calculate-angle";
-    import getSample from "$lib/sample-array-angle";
+    import {calculateAngle, calculateNeckAngle} from "$lib/calculate-angle";
     import inverseNormalize from "$lib/inverse-normalize";
     import DynamicTimeWarping from "$lib/dtw.js";
 
@@ -22,19 +21,25 @@
     let recordedAngles = [];
 
     let analyzeFrame = async (mpPose, frame, canvasContext) => {
-        let rightShoulder = frame[mpPose['POSE_LANDMARKS']['RIGHT_SHOULDER']]
-        let rightElbow = frame[mpPose['POSE_LANDMARKS']['RIGHT_ELBOW']]
-        let rightWrist = frame[mpPose['POSE_LANDMARKS']['RIGHT_WRIST']]
-        let leftShoulder = frame[mpPose['POSE_LANDMARKS']['LEFT_SHOULDER']]
-        let leftElbow = frame[mpPose['POSE_LANDMARKS']['LEFT_ELBOW']]
-        let leftWrist = frame[mpPose['POSE_LANDMARKS']['LEFT_WRIST']]
+        let rightShoulder = frame[mpPose['POSE_LANDMARKS']['LEFT_SHOULDER']]
+        let rightElbow = frame[mpPose['POSE_LANDMARKS']['LEFT_ELBOW']]
+        let rightWrist = frame[mpPose['POSE_LANDMARKS']['LEFT_WRIST']]
+        let leftShoulder = frame[mpPose['POSE_LANDMARKS']['RIGHT_SHOULDER']]
+        let leftElbow = frame[mpPose['POSE_LANDMARKS']['RIGHT_ELBOW']]
+        let leftWrist = frame[mpPose['POSE_LANDMARKS']['RIGHT_WRIST']]
         let nose = frame[mpPose['POSE_LANDMARKS']['NOSE']]
 
         let leftElbowAngle = calculateAngle(canvasContext, leftShoulder, leftElbow, leftWrist, false)
         let rightElbowAngle = calculateAngle(canvasContext, rightShoulder, rightElbow, rightWrist, true)
         let neckAngle = calculateNeckAngle(canvasContext, nose, leftShoulder, rightShoulder);
-        let leftShoulderAngle = calculateAngle(canvasContext, { x: leftShoulder.x, y: leftShoulder.y - 1 }, leftShoulder, leftWrist, false)
-        let rightShoulderAngle = calculateAngle(canvasContext, { x: rightShoulder.x, y: rightShoulder.y - 1 }, rightShoulder, rightWrist, true)
+        let leftShoulderAngle = calculateAngle(canvasContext, {
+            x: leftShoulder.x,
+            y: leftShoulder.y - 1
+        }, leftShoulder, leftWrist, false)
+        let rightShoulderAngle = calculateAngle(canvasContext, {
+            x: rightShoulder.x,
+            y: rightShoulder.y - 1
+        }, rightShoulder, rightWrist, true)
 
         //todo nose.z
 
@@ -45,39 +50,60 @@
             angles.shift();
         }
         if (recordedAngles.length === 0) { // return a high DWT distance if no recorded angles
-            return;
+            // return;
         }
         // DWT distance =======================================
-        let dwtDistance = await calculateDTWDistance();
-        // convert dwt distance to %
-        if (parseFloat(dwtDistance) < 1500) {
-            let normalizedDwt = inverseNormalize(dwtDistance, 200, 1500)
-            console.log(normalizedDwt)
-        }
+        let dwtDistance = await calculateDTW();
     }
 
-    let calculateDTWDistance = async () => {
-        const distFunc = (a, b) => Math.abs(a - b);
-        let convertedAngles = await Promise.all(angles.map(function (item) {
-            return item.rightElbow;
-        }));
+    let calculateDTW = async () => {
+        let distRightElbow = getNormalizedDWTDistance(angles, recordedAngles, 'rightElbow')
+        let distLeftElbow = getNormalizedDWTDistance(angles, recordedAngles, 'leftElbow')
+
+
+        if (await distLeftElbow > 1) {
+            console.log(distLeftElbow)
+        }
+
+        const leftElbowBlinker = document.getElementById('leftElbowBlinker');
+        if (await distLeftElbow > 75) {
+            leftElbowBlinker.classList.add('bg-green-500');
+            leftElbowBlinker.classList.remove('bg-white');
+        } else {
+            leftElbowBlinker.classList.remove('bg-green-500');
+            leftElbowBlinker.classList.add('bg-white');
+        }
+
+        const rightElbowBlinker = document.getElementById('rightElbowBlinker');
+        if (await distRightElbow > 75) {
+            rightElbowBlinker.classList.add('bg-green-500');
+            rightElbowBlinker.classList.remove('bg-white');
+        } else {
+            rightElbowBlinker.classList.remove('bg-green-500');
+            rightElbowBlinker.classList.add('bg-white');
+        }
+
+
+    }
+
+    let getNormalizedDWTDistance = async (liveAngles, recordedAngles, jointName) => {
+        let convertedLiveAngles = await Promise.all(liveAngles.map(function (item) {
+            return item[jointName];
+        }))
         let convertedRecordedAngles = await Promise.all(recordedAngles.map(function (item) {
-            return item.rightElbow;
-        }));
-        const dtw = new DynamicTimeWarping(convertedRecordedAngles, convertedAngles, distFunc);
+            return item[jointName];
+        }))
+
+        const dtw = new DynamicTimeWarping(convertedLiveAngles, convertedRecordedAngles, distFunc);
         const dist = dtw.getDistance();
-
-        const elbowBlinker = document.getElementById('elbowBlinker');
-
-        if (dist<1000) {
-            // console.log(dist)
-            elbowBlinker.classList.add('bg-green-500');
-        } else{
-            elbowBlinker.classList.remove('bg-green-500');
-        }
-        return dist;
+        // convert dwt distance to %
+        if (parseFloat(dist) < 1500) {
+            let normalizedDwt = inverseNormalize(dist, 200, 1500)
+            return (normalizedDwt)
+        } else return 0
     }
 
+    const distFunc = (a, b) => Math.abs(a - b);
     let isRecording = false;
     let countdown = 6; // starting value of the countdown
     let triggerRecord = () => {
@@ -184,7 +210,7 @@
             const currentTimestamp = performance.now();
             if (globalPreviousTimestamp !== 0) {
                 const timeDifference = currentTimestamp - globalPreviousTimestamp; // Time difference in milliseconds
-                 // Calculating frames per second
+                // Calculating frames per second
                 globalFrameRate = 1000 / timeDifference;
             }
             globalPreviousTimestamp = currentTimestamp;
@@ -448,38 +474,46 @@
                     </div>
                 </a>
             </div>
-<!--            <div class="flex-grow flex flex-col justify-center items-center">-->
-<!--                <div id="elbowBlinker" class="flex items-center justify-center w-40 h-40 rounded-full">-->
-<!--                    <img src="images/elbow.png" alt="Icon" class="w-20 h-20" />-->
-<!--                </div>-->
+            <!--            <div class="flex-grow flex flex-col justify-center items-center">-->
+            <!--                <div id="elbowBlinker" class="flex items-center justify-center w-40 h-40 rounded-full">-->
+            <!--                    <img src="images/elbow.png" alt="Icon" class="w-20 h-20" />-->
+            <!--                </div>-->
 
-<!--            </div>-->
+            <!--            </div>-->
             <!-- Spacer to push the bottom item to the end -->
             <div class="flex-grow"></div>
 
             <!-- Bottom item -->
-<!--            <div class="mt-auto">-->
-<!--                <div id="reccccc" class="flex items-center justify-center w-40 h-40 rounded-full">-->
-<!--                    <img src="images/record.png" alt="Icon" class="w-20 h-20"/>-->
-<!--                </div>-->
-<!--            </div>-->
+            <!--            <div class="mt-auto">-->
+            <!--                <div id="reccccc" class="flex items-center justify-center w-40 h-40 rounded-full">-->
+            <!--                    <img src="images/record.png" alt="Icon" class="w-20 h-20"/>-->
+            <!--                </div>-->
+            <!--            </div>-->
             <div class="mt-auto">
-                <div id="neckBlinker" class="flex items-center justify-center w-40 h-40 rounded-full">
+                <div id="neckBlinker" class="flex items-center justify-center bg-white w-40 h-40 rounded-full">
                     <img src="images/neck.png" alt="Icon" class="w-20 h-20"/>
                 </div>
             </div>
             <div class="mt-auto">
-                <div id="shoulderBlinker" class="flex items-center justify-center w-40 h-40 rounded-full">
+                <div id="shoulderBlinker" class="flex items-center justify-center bg-white w-40 h-40 rounded-full">
                     <img src="images/shoulders.png" alt="Icon" class="w-20 h-20"/>
                 </div>
             </div>
             <div class="mt-auto">
-                <div id="elbowBlinker" class="flex items-center justify-center w-40 h-40 rounded-full">
-                    <img src="images/elbow.png" alt="Icon" class="w-20 h-20" />
+                <div id="leftElbowBlinker" class="flex items-center justify-center bg-white w-40 h-40 rounded-full">
+                    <img src="images/elbow.png" alt="Icon" class="w-20 h-20"/>
                 </div>
             </div>
         </div>
 
+        <div class="absolute top-0 right-0 h-screen bg-transparent flex flex-col p-4 space-y-4">
+            <div class="flex-grow"></div>
+            <div class="mt-auto">
+                <div id="rightElbowBlinker" class="flex items-center justify-center bg-white w-40 h-40 rounded-full">
+                    <img src="images/elbow.png" alt="Icon" class="w-20 h-20 scale-x-[-1]"/>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
