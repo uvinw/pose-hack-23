@@ -44,46 +44,48 @@
         //todo nose.z
 
         // angle saving to memory =======================================
-        angles.push({rightElbow: rightElbowAngle, leftElbow: leftElbowAngle, timestamp: Date.now()});
+        angles.push({
+                rightElbow: rightElbowAngle,
+                leftElbow: leftElbowAngle,
+                neck: neckAngle,
+                rightShoulder: rightShoulderAngle,
+                leftShoulder: leftShoulderAngle,
+                timestamp: Date.now()
+        });
         // Remove the oldest angles if the array exceeds the time window
         while (angles.length > 0 && angles[0].timestamp < Date.now() - duration * 1000) {
             angles.shift();
         }
-        if (recordedAngles.length === 0) { // return a high DWT distance if no recorded angles
-            // return;
+        if (recordedAngles.length === 0 || isRecording) { // return a high DWT distance if no recorded angles
+            return;
         }
         // DWT distance =======================================
         let dwtDistance = await calculateDTW();
     }
 
     let calculateDTW = async () => {
-        let distRightElbow = getNormalizedDWTDistance(angles, recordedAngles, 'rightElbow')
-        let distLeftElbow = getNormalizedDWTDistance(angles, recordedAngles, 'leftElbow')
+        let distRightElbow = await getNormalizedDWTDistance(angles, recordedAngles, 'rightElbow')
+        let distLeftElbow = await getNormalizedDWTDistance(angles, recordedAngles, 'leftElbow')
+        let distNeck = await getNormalizedDWTDistance(angles, recordedAngles, 'neck')
+        let distRightShoulder = await getNormalizedDWTDistance(angles, recordedAngles, 'rightShoulder')
+        let distLeftShoulder = await getNormalizedDWTDistance(angles, recordedAngles, 'leftShoulder')
 
 
-        if (await distLeftElbow > 1) {
-            console.log(distLeftElbow)
-        }
+        handleBlinker(document.getElementById('rightElbowBlinker'), distRightElbow)
+        handleBlinker(document.getElementById('leftElbowBlinker'), distLeftElbow)
+        handleBlinker(document.getElementById('neckBlinker'), distNeck)
+        handleBlinker(document.getElementById('rightShoulderBlinker'), distRightShoulder)
+        handleBlinker(document.getElementById('leftShoulderBlinker'), distLeftShoulder)
+    }
 
-        const leftElbowBlinker = document.getElementById('leftElbowBlinker');
-        if (await distLeftElbow > 75) {
-            leftElbowBlinker.classList.add('bg-green-500');
-            leftElbowBlinker.classList.remove('bg-white');
+    function handleBlinker(blinker, distance) {
+        if (distance > 65) {
+            blinker.classList.add('bg-green-500');
+            blinker.classList.remove('bg-white');
         } else {
-            leftElbowBlinker.classList.remove('bg-green-500');
-            leftElbowBlinker.classList.add('bg-white');
+            blinker.classList.remove('bg-green-500');
+            blinker.classList.add('bg-white');
         }
-
-        const rightElbowBlinker = document.getElementById('rightElbowBlinker');
-        if (await distRightElbow > 75) {
-            rightElbowBlinker.classList.add('bg-green-500');
-            rightElbowBlinker.classList.remove('bg-white');
-        } else {
-            rightElbowBlinker.classList.remove('bg-green-500');
-            rightElbowBlinker.classList.add('bg-white');
-        }
-
-
     }
 
     let getNormalizedDWTDistance = async (liveAngles, recordedAngles, jointName) => {
@@ -131,33 +133,6 @@
 
     let triggerSnapshotAnalysis = async () => {
         // analyzeFrame(globalMpPose, globalFrame, globalCanvasContext);
-    }
-    let takeSnapshot = () => {
-        // console.log(globalResult)
-        let leftShoulder = globalFrame["12"]
-        let leftElbow = globalFrame["14"]
-        // console.log("localized", leftShoulder)
-        // console.log("word", globalWorld["12"]["x"])
-
-        isHeadBent(globalFrame)
-
-        if (leftShoulder["x"] < 0) {
-            console.log("shoulder outside view");
-            return;
-        }
-        if (leftElbow["x"] < 0) {
-            console.log("elbow outside view");
-            return;
-        }
-
-        // console.log(leftShoulder["y"])
-        // console.log(leftElbow["y"])
-        if (leftElbow["y"] < leftShoulder["y"]) {
-            console.log("elbow below shoulder");
-            return;
-        }
-
-
     }
 
     let globalCanvasContext = null;
@@ -467,13 +442,6 @@
                 </div>
             {/if}
 
-            <div>
-                <a href="/" on:click|preventDefault={triggerSnapshotAnalysis}>
-                    <div class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                        Snapshot
-                    </div>
-                </a>
-            </div>
             <!--            <div class="flex-grow flex flex-col justify-center items-center">-->
             <!--                <div id="elbowBlinker" class="flex items-center justify-center w-40 h-40 rounded-full">-->
             <!--                    <img src="images/elbow.png" alt="Icon" class="w-20 h-20" />-->
@@ -495,7 +463,7 @@
                 </div>
             </div>
             <div class="mt-auto">
-                <div id="shoulderBlinker" class="flex items-center justify-center bg-white w-40 h-40 rounded-full">
+                <div id="leftShoulderBlinker" class="flex items-center justify-center bg-white w-40 h-40 rounded-full">
                     <img src="images/shoulders.png" alt="Icon" class="w-20 h-20"/>
                 </div>
             </div>
@@ -508,6 +476,11 @@
 
         <div class="absolute top-0 right-0 h-screen bg-transparent flex flex-col p-4 space-y-4">
             <div class="flex-grow"></div>
+            <div class="mt-auto">
+                <div id="rightShoulderBlinker" class="flex items-center justify-center bg-white w-40 h-40 rounded-full">
+                    <img src="images/shoulders.png" alt="Icon" class="w-20 h-20 scale-x-[-1]"/>
+                </div>
+            </div>
             <div class="mt-auto">
                 <div id="rightElbowBlinker" class="flex items-center justify-center bg-white w-40 h-40 rounded-full">
                     <img src="images/elbow.png" alt="Icon" class="w-20 h-20 scale-x-[-1]"/>
