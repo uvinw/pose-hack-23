@@ -69,7 +69,7 @@
         let distRightShoulder = await getNormalizedDWTDistance(angles, recordedAngles, 'rightShoulder')
         let distLeftShoulder = await getNormalizedDWTDistance(angles, recordedAngles, 'leftShoulder')
 
-
+        handleReps([distRightElbow, distLeftElbow, distNeck, distRightShoulder, distLeftShoulder])
         handleBlinker(document.getElementById('rightElbowBlinker'), distRightElbow)
         handleBlinker(document.getElementById('leftElbowBlinker'), distLeftElbow)
         handleBlinker(document.getElementById('neckBlinker'), distNeck)
@@ -79,11 +79,22 @@
 
     function handleBlinker(blinker, distance) {
         if (distance > 65) {
-            blinker.classList.add('bg-green-500');
+            blinker.classList.add('bg-green-400');
             blinker.classList.remove('bg-white');
         } else {
-            blinker.classList.remove('bg-green-500');
+            blinker.classList.remove('bg-green-400');
             blinker.classList.add('bg-white');
+        }
+    }
+
+    let lastRepIncrementTime = 0;
+    function handleReps(allDistances) {
+        if (lastRepIncrementTime > Date.now() - 2000) {
+            return;
+        }
+        if (allDistances[0] > 65 && allDistances[1] > 65 && allDistances[2] > 65 && allDistances[3] > 65 && allDistances[4] > 65) {
+            reps += 1;
+            lastRepIncrementTime = Date.now();
         }
     }
 
@@ -106,9 +117,11 @@
 
     const distFunc = (a, b) => Math.abs(a - b);
     let isRecording = false;
+    let reps = 0;
     let countdown = 6; // starting value of the countdown
     let triggerRecord = () => {
         if (!isRecording) {
+            reps = 0;
             const interval = setInterval(() => {
                 countdown -= 1;
                 if (countdown === 0) {
@@ -409,7 +422,7 @@
                 <a href="/" on:click|preventDefault={triggerRecord}>
                     <div id="recordButton"
                          class="bg-red-500 hover:bg-red-700 text-white font-bold w-20 h-20 flex items-center justify-center rounded-full">
-                        <span class="text-xs">Record</span>
+                        <span class="text-lg">Record</span>
                     </div>
                 </a>
             </div>
@@ -447,7 +460,7 @@
 
         {#if countdown < 6}
             <div id="readyUp" class="absolute top-10 left-0 w-full flex justify-center text-white text-6xl">
-                ready up: {countdown}
+                recording in... {countdown} seconds
             </div>
         {/if}
     </div>
@@ -456,6 +469,15 @@
     <!-- Right white panel -->
     <div class="w-1/4 bg-white flex flex-col items-center justify-center">
         <div class="w-1/4 bg-white flex flex-col items-center justify-center space-y-6">
+
+            <div class="absolute top-0  transform z-10 mt-10">
+                <a href="/" on:click|preventDefault>
+                    <div class="bg-blue-500 text-white font-bold w-32 h-32 flex items-center justify-center rounded-full">
+                        <span class="text-2xl">Reps: {reps}</span>
+                    </div>
+                </a>
+            </div>
+
             <div id="rightShoulderBlinker" class="flex flex-col items-center justify-center bg-white w-40 h-40 rounded-full">
                 <img src="images/shoulders.png" alt="Icon" class="w-20 h-20 scale-x-[-1]"/>
                 <span class="text-center text-sm font-medium mt-5">Right Shoulder</span>
