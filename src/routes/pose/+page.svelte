@@ -59,7 +59,7 @@
             return;
         }
         // DWT distance =======================================
-        let dwtDistance = await calculateDTW();
+        await calculateDTW();
     }
 
     let calculateDTW = async () => {
@@ -78,7 +78,7 @@
     }
 
     function handleBlinker(blinker, distance) {
-        if (distance > 65) {
+        if (distance > thresholdAccuracy) {
             blinker.classList.add('bg-green-400');
             blinker.classList.remove('bg-white');
         } else {
@@ -87,12 +87,17 @@
         }
     }
 
+    let thresholdAccuracy = 75;
     let lastRepIncrementTime = 0;
+    let stopRecordTime = 0;
     function handleReps(allDistances) {
         if (lastRepIncrementTime > Date.now() - 2000) {
             return;
         }
-        if (allDistances[0] > 65 && allDistances[1] > 65 && allDistances[2] > 65 && allDistances[3] > 65 && allDistances[4] > 65) {
+        if (stopRecordTime > Date.now() - 2000) {
+            return;
+        }
+        if (allDistances[0] > thresholdAccuracy && allDistances[1] > thresholdAccuracy && allDistances[2] > thresholdAccuracy && allDistances[3] > thresholdAccuracy && allDistances[4] > thresholdAccuracy) {
             reps += 1;
             lastRepIncrementTime = Date.now();
         }
@@ -118,7 +123,9 @@
     const distFunc = (a, b) => Math.abs(a - b);
     let isRecording = false;
     let reps = 0;
-    let countdown = 6; // starting value of the countdown
+    let countdown = 5; // starting value of the ready up countdown
+    let recordingCountdown = 5;
+
     let triggerRecord = () => {
         if (!isRecording) {
             reps = 0;
@@ -128,13 +135,23 @@
                     clearInterval(interval);
                     // action after countdown ends
                     isRecording = true;
-                    countdown = 6;
-                    // showRecordingIndicator(true)
+                    countdown = 5;
+
+                    // ==== the recording countdown
+                    const interval2 = setInterval(() => {
+                        recordingCountdown -= 1;
+                        if (recordingCountdown === 0) {
+                            clearInterval(interval2);
+                            recordingCountdown = 5;
+                        }
+                    }, 1000);
+                    //=========================================
+                    // ==== wait for 5 seconds
                     setTimeout(() => {
                         console.log('5 seconds have passed!');
-                        // showRecordingIndicator(false)
                         recordedAngles = [...angles];
                         isRecording = false;
+                        stopRecordTime = Date.now();
                     }, 5000);
                 }
             }, 1000);
@@ -384,21 +401,11 @@
     //     }
     // }
 
-    // function updateProgressBar(progress) {
-    //     const progressBar = document.getElementById('progressBar');
-    //     progressBar.innerHTML = `
-    //     <svg width="30%" height="30%" viewBox="0 0 42 42" class="donut">
-    //         <circle class="donut-hole" cx="21" cy="21" r="15.91549430918954" fill="none"></circle>
-    //         <circle class="donut-ring" cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#d2d3d4" stroke-width="3"></circle>
-    //         <circle class="donut-segment" cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#00a3e0" stroke-width="3" stroke-dasharray="${progress} ${100 - progress}" stroke-dashoffset="25"></circle>
-    //     </svg>
-    // `;
-    // }
-    let appstatus = "Recording";
 </script>
 
 
 <svelte:head>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.4.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdn.skypack.dev/device-detector-js@2.2.10"></script>
     <link rel="stylesheet" type="text/css"
           href="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils_3d@0.2/landmark_grid.css" crossorigin="anonymous">
@@ -415,9 +422,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.4/pose.js" crossorigin="anonymous"></script>
 </svelte:head>
 
-<div class="container h-screen w-full flex">
-    <div class="w-1/4 bg-white flex flex-col items-center justify-center relative">
-        {#if !isRecording && countdown === 6}
+<div class="container h-screen w-full flex bg-black">
+    <div class="w-1/4 bg-black flex flex-col items-center justify-center relative">
+        {#if !isRecording && countdown === 5}
             <div class="absolute top-0 left-1/2 transform -translate-x-1/2 z-10 mt-10">
                 <a href="/" on:click|preventDefault={triggerRecord}>
                     <div id="recordButton"
@@ -450,25 +457,25 @@
         {#if isRecording}
             <div id="recordingIndicator" class="absolute top-10 left-0 w-full flex justify-center">
                 <div class="blink animate-pulse">
-                    <svg width="300" height="50" viewBox="0 0 200 50" xmlns="http://www.w3.org/2000/svg" class="mt-2">
+                    <svg width="500" height="50" viewBox="0 0 200 50" xmlns="http://www.w3.org/2000/svg" class="mt-2">
                         <circle cx="20" cy="17" r="10" fill="red"/>
-                        <text x="50" y="30" font-family="Arial" font-size="40" fill="red">{appstatus}</text>
+                        <text x="50" y="30" font-family="Arial" font-size="40" fill="red">Recording ({recordingCountdown})</text>
                     </svg>
                 </div>
             </div>
         {/if}
 
-        {#if countdown < 6}
+        {#if countdown < 5}
             <div id="readyUp" class="absolute top-10 left-0 w-full flex justify-center text-white text-6xl">
-                recording in... {countdown} seconds
+                Get ready... ({countdown})
             </div>
         {/if}
     </div>
 
 
     <!-- Right white panel -->
-    <div class="w-1/4 bg-white flex flex-col items-center justify-center">
-        <div class="w-1/4 bg-white flex flex-col items-center justify-center space-y-6">
+    <div class="w-1/4 bg-black flex flex-col items-center justify-center">
+        <div class="w-1/4 bg-black flex flex-col items-center justify-center space-y-6">
 
             <div class="absolute top-0  transform z-10 mt-10">
                 <a href="/" on:click|preventDefault>
@@ -521,4 +528,8 @@
         left: 0;
         background-color: #99999999;
     }
+
+     :global(body) {
+         background-color: black;
+     }
 </style>
