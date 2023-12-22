@@ -79,21 +79,28 @@
     }
 
     let isRecording = false;
+    let countdown = 6; // starting value of the countdown
     let triggerRecord = () => {
         if (!isRecording) {
-            isRecording = true;
-            showRecordingIndicator(true)
-            setTimeout(() => {
-                console.log('5 seconds have passed!');
-                showRecordingIndicator(false)
-                recordedAngles = [...angles];
-                isRecording = false;
-            }, 5000);
-
+            const interval = setInterval(() => {
+                countdown -= 1;
+                if (countdown === 0) {
+                    clearInterval(interval);
+                    // action after countdown ends
+                    isRecording = true;
+                    countdown = 6;
+                    // showRecordingIndicator(true)
+                    setTimeout(() => {
+                        console.log('5 seconds have passed!');
+                        // showRecordingIndicator(false)
+                        recordedAngles = [...angles];
+                        isRecording = false;
+                    }, 5000);
+                }
+            }, 1000);
         } else {
             // do nothing
         }
-
     }
 
     let triggerSnapshotAnalysis = async () => {
@@ -131,7 +138,6 @@
 
     onMount(async () => {
 
-        showRecordingIndicator(false)
         const controls = window;
         const LandmarkGrid = window.LandmarkGrid;
         const drawingUtils = window;
@@ -375,22 +381,7 @@
     //     </svg>
     // `;
     // }
-
-    function showRecordingIndicator(isRecording) {
-        const recordingIndicator = document.getElementById('recordingIndicator');
-        const recordButton = document.getElementById('recordButton');
-        if (isRecording) {
-            recordingIndicator.classList.remove('hidden');
-            recordButton.classList.add('bg-red-700');
-            recordButton.classList.remove('bg-red-500');
-            recordButton.classList.add('cursor-not-allowed');
-        } else {
-            recordingIndicator.classList.add('hidden');
-            recordButton.classList.add('bg-red-500');
-            recordButton.classList.remove('bg-red-700');
-            recordButton.classList.remove('cursor-not-allowed');
-        }
-    }
+    let appstatus = "Recording";
 </script>
 
 
@@ -418,24 +409,38 @@
         <canvas class="output_canvas" width="1280px" height="720px"></canvas>
 
         <!-- Recording indicator -->
-        <div id="recordingIndicator" class="absolute top-10 left-0 w-full flex justify-center">
-            <div class="blink animate-pulse">
-                <svg width="300" height="50" viewBox="0 0 200 50" xmlns="http://www.w3.org/2000/svg" class="mt-2">
-                    <circle cx="20" cy="20" r="10" fill="red" />
-                    <text x="45" y="30" font-family="Arial" font-size="30" fill="red">RECORDING</text>
-                </svg>
+        {#if isRecording}
+            <div id="recordingIndicator" class="absolute top-10 left-0 w-full flex justify-center">
+                <div class="blink animate-pulse">
+                    <svg width="300" height="50" viewBox="0 0 200 50" xmlns="http://www.w3.org/2000/svg" class="mt-2">
+                        <circle cx="20" cy="17" r="10" fill="red"/>
+                        <text x="50" y="30" font-family="Arial" font-size="40" fill="red">{appstatus}</text>
+                    </svg>
+                </div>
             </div>
-        </div>
+        {/if}
+
+
+        {#if countdown < 6}
+            <div id="readyUp" class="absolute top-10 left-0 w-full flex justify-center text-white text-6xl">
+                ready up: {countdown}
+            </div>
+        {/if}
 
         <!-- Floating Side Panel -->
-        <div class="absolute top-0 left-0 h-full bg-transparent flex flex-col p-4 space-y-4">
+        <div class="absolute top-0 left-0 h-screen bg-transparent flex flex-col p-4 space-y-4">
             <!-- Contents of the panel -->
-            <div>
-                <a href="/" on:click|preventDefault={triggerRecord}>
-                    <div id="recordButton" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 flex items-center justify-center rounded">                        Record
-                    </div>
-                </a>
-            </div>
+            {#if !isRecording && countdown === 6}
+                <div>
+                    <a href="/" on:click|preventDefault={triggerRecord}>
+                        <div id="recordButton"
+                             class="bg-red-500 hover:bg-red-700 text-white font-bold px-4 py-4 flex items-center justify-center rounded">
+                            Record a new exercise
+                        </div>
+                    </a>
+                </div>
+            {/if}
+
             <div>
                 <a href="/" on:click|preventDefault={triggerSnapshotAnalysis}>
                     <div class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
@@ -443,16 +448,36 @@
                     </div>
                 </a>
             </div>
-            <div class="flex-grow flex flex-col justify-center items-center">
-                <div>Centered Content 1</div>
-                <div>Centered Content 2</div>
+<!--            <div class="flex-grow flex flex-col justify-center items-center">-->
+<!--                <div id="elbowBlinker" class="flex items-center justify-center w-40 h-40 rounded-full">-->
+<!--                    <img src="images/elbow.png" alt="Icon" class="w-20 h-20" />-->
+<!--                </div>-->
+
+<!--            </div>-->
+            <!-- Spacer to push the bottom item to the end -->
+            <div class="flex-grow"></div>
+
+            <!-- Bottom item -->
+<!--            <div class="mt-auto">-->
+<!--                <div id="reccccc" class="flex items-center justify-center w-40 h-40 rounded-full">-->
+<!--                    <img src="images/record.png" alt="Icon" class="w-20 h-20"/>-->
+<!--                </div>-->
+<!--            </div>-->
+            <div class="mt-auto">
+                <div id="neckBlinker" class="flex items-center justify-center w-40 h-40 rounded-full">
+                    <img src="images/neck.png" alt="Icon" class="w-20 h-20"/>
+                </div>
+            </div>
+            <div class="mt-auto">
+                <div id="shoulderBlinker" class="flex items-center justify-center w-40 h-40 rounded-full">
+                    <img src="images/shoulders.png" alt="Icon" class="w-20 h-20"/>
+                </div>
+            </div>
+            <div class="mt-auto">
                 <div id="elbowBlinker" class="flex items-center justify-center w-40 h-40 rounded-full">
                     <img src="images/elbow.png" alt="Icon" class="w-20 h-20" />
                 </div>
-
             </div>
-            <div>Content 3</div>
-            <!-- Add more content as needed -->
         </div>
 
     </div>
