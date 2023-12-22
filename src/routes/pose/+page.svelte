@@ -19,6 +19,7 @@
     const duration = 2; // Duration in seconds
     const maxFrames = frameRate * duration;
     let angles = [];
+    let recordedAngles = [];
 
     let analyzeFrame = async (mpPose, frame, canvasContext) => {
         let leftShoulder = frame[mpPose['POSE_LANDMARKS']['RIGHT_SHOULDER']]
@@ -26,13 +27,20 @@
         let leftWrist = frame[mpPose['POSE_LANDMARKS']['RIGHT_WRIST']]
         let elbowAngle = calculateAngle(canvasContext, leftShoulder, leftElbow, leftWrist)
 
+        // angle calculation =======================================
         angles.push({angle: elbowAngle, timestamp: Date.now()});
         // Remove the oldest angles if the array exceeds the time window
         while (angles.length > 0 && angles[0].timestamp < Date.now() - duration * 1000) {
             angles.shift();
         }
+
+        if (recordedAngles.length === 0) { // return a high DWT distance if no recorded angles
+            return;
+        }
+
+        // DWT distance =======================================
         let dwtDistance = await calculateDTWDistance();
-        // convert dwtdistance to number
+        // convert dwt distance to %
         if (parseFloat(dwtDistance) < 1500) {
             let normalizedDwt = inverseNormalize(dwtDistance, 200, 1500)
             console.log(normalizedDwt)
@@ -44,22 +52,37 @@
         let convertedAngles = await Promise.all(angles.map(function (item) {
             return item.angle;
         }));
-        let sample = getSample();
-        let referenceAngles = await Promise.all(sample.map(function (item) {
-            return item.value;
+        let convertedRecordedAngles = await Promise.all(recordedAngles.map(function (item) {
+            return item.angle;
         }));
-        const dtw = new DynamicTimeWarping(referenceAngles, convertedAngles, distFunc);
+        const dtw = new DynamicTimeWarping(convertedRecordedAngles, convertedAngles, distFunc);
         const dist = dtw.getDistance();
         if (dist<1000) {
             // console.log(dist)
         }
         return dist;
     }
+
+    let isRecording = false;
+    let triggerRecord = async () => {
+        if (!isRecording) {
+            isRecording = true;
+            showRecordingIndicator(true)
+            setTimeout(() => {
+                console.log('5 seconds have passed!');
+                showRecordingIndicator(false)
+                recordedAngles = [...angles];
+            }, 5000);
+
+        } else {
+            isRecording = false;
+            showRecordingIndicator(false)
+        }
+
+    }
+
     let triggerSnapshotAnalysis = async () => {
         // analyzeFrame(globalMpPose, globalFrame, globalCanvasContext);
-        angles.forEach((angle) => {
-            // console.log(angle.angle)
-        })
     }
     let takeSnapshot = () => {
         // console.log(globalResult)
@@ -90,8 +113,10 @@
     }
 
     let globalCanvasContext = null;
+
     onMount(async () => {
 
+        showRecordingIndicator(false)
         const controls = window;
         const LandmarkGrid = window.LandmarkGrid;
         const drawingUtils = window;
@@ -336,6 +361,19 @@
     // `;
     // }
 
+    function showRecordingIndicator(show) {
+        const recordingIndicator = document.getElementById('recordingIndicator');
+        const recordButton = document.getElementById('recordButton');
+        if (show) {
+            recordingIndicator.classList.remove('hidden');
+            recordButton.classList.add('bg-red-700');
+            recordButton.classList.remove('bg-red-500');
+        } else {
+            recordingIndicator.classList.add('hidden');
+            recordButton.classList.add('bg-red-500');
+            recordButton.classList.remove('bg-red-700');
+        }
+    }
 </script>
 
 
@@ -359,7 +397,19 @@
 
 <div class="container h-screen w-full">
     <video class="input_video hidden"></video>
-    <canvas class="output_canvas" width="1280px" height="720px"></canvas>
+    <div class="relative w-[1280px] h-[720px]">
+        <canvas class="output_canvas" width="1280px" height="720px"></canvas>
+        <div id="recordingIndicator" class="absolute top-10 left-0 w-full flex justify-center">
+            <div class="blink animate-pulse">
+                <svg width="300" height="50" viewBox="0 0 200 50" xmlns="http://www.w3.org/2000/svg" class="mt-2">
+                    <circle cx="20" cy="20" r="10" fill="red" />
+                    <text x="45" y="30" font-family="Arial" font-size="30" fill="red">RECORDING</text>
+                </svg>
+            </div>
+        </div>
+
+    </div>
+
     <!--    <div class="loading">-->
     <!--        <div class="spinner"></div>-->
     <!--        <div class="message">-->
@@ -370,6 +420,11 @@
 <a href="/" on:click|preventDefault={triggerSnapshotAnalysis}>
     <div class="fixed top-0 left-0 m-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
         Snapshot
+    </div>
+</a>
+<a href="/" on:click|preventDefault={triggerRecord}>
+    <div id="recordButton" class="fixed top-0 left-40 m-4 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+        Record
     </div>
 </a>
 <!--<div id="progressBar" class="absolute top-0 left-0 w-full h-full flex items-center justify-center">-->
