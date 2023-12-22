@@ -6,29 +6,27 @@ export let calculateAngle = async (canvasContext, firstPoint, secondPoint, third
 
     const vectorAB = {x: secondPoint.x - firstPoint.x, y: secondPoint.y - firstPoint.y};
     const vectorBC = {x: thirdPoint.x - secondPoint.x, y: thirdPoint.y - secondPoint.y};
+
     // Calculate the dot product of AB & BC
     const dotProduct = vectorAB.x * vectorBC.x + vectorAB.y * vectorBC.y;
+
     // Calculate the magnitude of AB & BC
     const magnitudeAB = Math.sqrt(vectorAB.x * vectorAB.x + vectorAB.y * vectorAB.y);
     const magnitudeBC = Math.sqrt(vectorBC.x * vectorBC.x + vectorBC.y * vectorBC.y);
+
     // Calculate the angle in radians
     let angle = Math.acos(dotProduct / (magnitudeAB * magnitudeBC));
 
-    // Use the cross product to adjust the angle for >180 degrees
-    const crossProduct = vectorAB.x * vectorBC.y - vectorAB.y * vectorBC.x;
-    if (isClockwise) {
-        if (crossProduct < 0) {
-            angle = 2 * Math.PI - angle;
-        }
-    } else {
-        if (crossProduct > 0) {
-            angle = 2 * Math.PI - angle;
-        }
+    // Convert radians to degrees
+    let degreeAngle = angle * (180 / Math.PI);
+
+    // Adjust the angle to decrease from 180 back to 0 after it exceeds 180 degrees
+    if (degreeAngle > 180) {
+        degreeAngle = 360 - degreeAngle;
     }
 
-    // Convert radians to degrees
-    let degreeAngle = angle * (180 / Math.PI)
     degreeAngle = Number(degreeAngle.toFixed(2));
+
 
     // Print the angle on the canvas
     canvasContext.font = "20px Arial";
@@ -65,7 +63,7 @@ export let calculateNeckAngle = async (canvasContext, nose, leftShoulder, rightS
     canvasContext.lineTo(normalizedMidShoulder.x, normalizedMidShoulder.y);
     canvasContext.stroke();
 
-    return calculateAngle(canvasContext, rightShoulder, midShoulder, nose, false)
+    return calculateAngle(canvasContext, rightShoulder, midShoulder, nose, true)
 }
 
 export let normalizeForCanvas = (canvasContext, point) => {
