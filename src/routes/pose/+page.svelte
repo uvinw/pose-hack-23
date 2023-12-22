@@ -2,7 +2,6 @@
     // import './test.css';
 
     import {onMount} from 'svelte'
-    import isHeadBent from "$lib/bend-head";
     import {calculateAngle, calculateNeckAngle} from "$lib/calculate-angle";
     import inverseNormalize from "$lib/inverse-normalize";
     import DynamicTimeWarping from "$lib/dtw.js";
@@ -29,28 +28,28 @@
         let leftWrist = frame[mpPose['POSE_LANDMARKS']['RIGHT_WRIST']]
         let nose = frame[mpPose['POSE_LANDMARKS']['NOSE']]
 
-        let leftElbowAngle = calculateAngle(canvasContext, leftShoulder, leftElbow, leftWrist, false)
-        let rightElbowAngle = calculateAngle(canvasContext, rightShoulder, rightElbow, rightWrist, true)
+        let leftElbowAngle = calculateAngle(canvasContext, leftShoulder, leftElbow, leftWrist, true)
+        let rightElbowAngle = calculateAngle(canvasContext, rightShoulder, rightElbow, rightWrist, false)
         let neckAngle = calculateNeckAngle(canvasContext, nose, leftShoulder, rightShoulder);
         let leftShoulderAngle = calculateAngle(canvasContext, {
             x: leftShoulder.x,
             y: leftShoulder.y - 1
-        }, leftShoulder, leftWrist, false)
+        }, leftShoulder, leftWrist, true)
         let rightShoulderAngle = calculateAngle(canvasContext, {
             x: rightShoulder.x,
             y: rightShoulder.y - 1
-        }, rightShoulder, rightWrist, true)
+        }, rightShoulder, rightWrist, false)
 
         //todo nose.z
 
         // angle saving to memory =======================================
         angles.push({
-                rightElbow: rightElbowAngle,
-                leftElbow: leftElbowAngle,
-                neck: neckAngle,
-                rightShoulder: rightShoulderAngle,
-                leftShoulder: leftShoulderAngle,
-                timestamp: Date.now()
+            rightElbow: rightElbowAngle,
+            leftElbow: leftElbowAngle,
+            neck: neckAngle,
+            rightShoulder: rightShoulderAngle,
+            leftShoulder: leftShoulderAngle,
+            timestamp: Date.now()
         });
         // Remove the oldest angles if the array exceeds the time window
         while (angles.length > 0 && angles[0].timestamp < Date.now() - duration * 1000) {
@@ -403,12 +402,37 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.4/pose.js" crossorigin="anonymous"></script>
 </svelte:head>
 
+<div class="container h-screen w-full flex">
+    <div class="w-1/4 bg-white flex flex-col items-center justify-center relative">
+        {#if !isRecording && countdown === 6}
+            <div class="absolute top-0 left-1/2 transform -translate-x-1/2 z-10 mt-10">
+                <a href="/" on:click|preventDefault={triggerRecord}>
+                    <div id="recordButton"
+                         class="bg-red-500 hover:bg-red-700 text-white font-bold w-20 h-20 flex items-center justify-center rounded-full">
+                        <span class="text-xs">Record</span>
+                    </div>
+                </a>
+            </div>
+        {/if}
 
-<div class="container h-screen w-full">
+        <div id="neckBlinker" class="flex flex-col items-center justify-center bg-white w-40 h-40 rounded-full">
+            <img src="images/neck.png" alt="Icon" class="w-20 h-20"/>
+            <span class="text-center text-sm font-medium mt-5">Neck</span>
+        </div>
+        <div id="leftShoulderBlinker" class="flex flex-col items-center justify-center bg-white w-40 h-40 rounded-full">
+            <img src="images/shoulders.png" alt="Icon" class="w-20 h-20"/>
+            <span class="text-center text-sm font-medium mt-5">Left Shoulder</span>
+        </div>
+        <div id="leftElbowBlinker" class="flex flex-col items-center justify-center bg-white w-40 h-40 rounded-full">
+            <img src="images/elbow.png" alt="Icon" class="w-20 h-20"/>
+            <span class="text-center text-sm font-medium mt-5">Left Elbow</span>
+        </div>
+    </div>
+
+
+    <div class="flex-grow relative">
     <video class="input_video hidden"></video>
-    <div class="relative w-[1280px] h-[720px]">
         <canvas class="output_canvas" width="1280px" height="720px"></canvas>
-
         <!-- Recording indicator -->
         {#if isRecording}
             <div id="recordingIndicator" class="absolute top-10 left-0 w-full flex justify-center">
@@ -421,70 +445,24 @@
             </div>
         {/if}
 
-
         {#if countdown < 6}
             <div id="readyUp" class="absolute top-10 left-0 w-full flex justify-center text-white text-6xl">
                 ready up: {countdown}
             </div>
         {/if}
+    </div>
 
-        <!-- Floating Side Panel -->
-        <div class="absolute top-0 left-0 h-screen bg-transparent flex flex-col p-4 space-y-4">
-            <!-- Contents of the panel -->
-            {#if !isRecording && countdown === 6}
-                <div>
-                    <a href="/" on:click|preventDefault={triggerRecord}>
-                        <div id="recordButton"
-                             class="bg-red-500 hover:bg-red-700 text-white font-bold px-4 py-4 flex items-center justify-center rounded">
-                            Record a new exercise
-                        </div>
-                    </a>
-                </div>
-            {/if}
 
-            <!--            <div class="flex-grow flex flex-col justify-center items-center">-->
-            <!--                <div id="elbowBlinker" class="flex items-center justify-center w-40 h-40 rounded-full">-->
-            <!--                    <img src="images/elbow.png" alt="Icon" class="w-20 h-20" />-->
-            <!--                </div>-->
-
-            <!--            </div>-->
-            <!-- Spacer to push the bottom item to the end -->
-            <div class="flex-grow"></div>
-
-            <!-- Bottom item -->
-            <!--            <div class="mt-auto">-->
-            <!--                <div id="reccccc" class="flex items-center justify-center w-40 h-40 rounded-full">-->
-            <!--                    <img src="images/record.png" alt="Icon" class="w-20 h-20"/>-->
-            <!--                </div>-->
-            <!--            </div>-->
-            <div class="mt-auto">
-                <div id="neckBlinker" class="flex items-center justify-center bg-white w-40 h-40 rounded-full">
-                    <img src="images/neck.png" alt="Icon" class="w-20 h-20"/>
-                </div>
+    <!-- Right white panel -->
+    <div class="w-1/4 bg-white flex flex-col items-center justify-center">
+        <div class="w-1/4 bg-white flex flex-col items-center justify-center space-y-6">
+            <div id="rightShoulderBlinker" class="flex flex-col items-center justify-center bg-white w-40 h-40 rounded-full">
+                <img src="images/shoulders.png" alt="Icon" class="w-20 h-20 scale-x-[-1]"/>
+                <span class="text-center text-sm font-medium mt-5">Right Shoulder</span>
             </div>
-            <div class="mt-auto">
-                <div id="leftShoulderBlinker" class="flex items-center justify-center bg-white w-40 h-40 rounded-full">
-                    <img src="images/shoulders.png" alt="Icon" class="w-20 h-20"/>
-                </div>
-            </div>
-            <div class="mt-auto">
-                <div id="leftElbowBlinker" class="flex items-center justify-center bg-white w-40 h-40 rounded-full">
-                    <img src="images/elbow.png" alt="Icon" class="w-20 h-20"/>
-                </div>
-            </div>
-        </div>
-
-        <div class="absolute top-0 right-0 h-screen bg-transparent flex flex-col p-4 space-y-4">
-            <div class="flex-grow"></div>
-            <div class="mt-auto">
-                <div id="rightShoulderBlinker" class="flex items-center justify-center bg-white w-40 h-40 rounded-full">
-                    <img src="images/shoulders.png" alt="Icon" class="w-20 h-20 scale-x-[-1]"/>
-                </div>
-            </div>
-            <div class="mt-auto">
-                <div id="rightElbowBlinker" class="flex items-center justify-center bg-white w-40 h-40 rounded-full">
-                    <img src="images/elbow.png" alt="Icon" class="w-20 h-20 scale-x-[-1]"/>
-                </div>
+            <div id="rightElbowBlinker" class="flex flex-col items-center justify-center bg-white w-40 h-40 rounded-full">
+                <img src="images/elbow.png" alt="Icon" class="w-20 h-20 scale-x-[-1]"/>
+                <span class="text-center text-sm font-medium mt-5">Right Elbow</span>
             </div>
         </div>
     </div>
@@ -497,7 +475,7 @@
 
 <div class="control-panel fixed left-0 top-0 h-screen w-1/6 bg-white hidden">
 </div>
-<div class="square-box fixed right-0 top-0 h-screen w-1/6 bg-white">
+<div class="square-box fixed right-0 top-0 h-screen w-1/6 bg-white hidden">
     <div class="landmark-grid-container">
     </div>
 </div>
