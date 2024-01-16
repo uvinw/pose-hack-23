@@ -24,4 +24,4 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          tags: ghcr.io/uvin-vivira/poser:latest
+          tags: ghcr.io/uvinw/pose-hack-23:latest
